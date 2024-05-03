@@ -2,8 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"compress/zlib"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -11,48 +9,28 @@ import (
 	"log"
 	"os"
 
+	"github.com/deltadecay/readosmpbf/decompress"
 	"github.com/deltadecay/readosmpbf/pb"
 	"google.golang.org/protobuf/proto"
 )
 
-func GetBlobData(blob *pb.Blob) []byte {
-	var data []byte
+func GetUncompressedBlobData(blob *pb.Blob) ([]byte, error) {
 	if blob.GetRaw() != nil {
-		//log.Println("Raw")
-		data = blob.GetRaw()
+		return blob.GetRaw(), nil
 	} else if blob.GetZlibData() != nil {
-		//log.Println("Zlib")
-		r, err := zlib.NewReader(bytes.NewReader(blob.GetZlibData()))
-		if err != nil {
-			log.Fatalln("Failed to zlib decompress data")
-		}
-		defer r.Close()
-
-		//l := blob.GetRawSize() + bytes.MinRead
-		//databuf := make([]byte, 0, l+l/10)
-		// NewBuffer wants len=0 but desired cap
-		databuf := make([]byte, 0, blob.GetRawSize())
-
-		buf := bytes.NewBuffer(databuf)
-		if _, err = buf.ReadFrom(r); err != nil {
-			log.Fatalln("Failed to read the decompressed data:", err)
-		}
-		if buf.Len() != int(blob.GetRawSize()) {
-			log.Fatalf("Raw blob size is %d but expected %d", buf.Len(), blob.GetRawSize())
-		}
-		data = buf.Bytes()
-
+		return decompress.ZlibData(blob.GetZlibData(), blob.GetRawSize())
 	} else if blob.GetLzmaData() != nil {
-		log.Println("Lzma")
+		return decompress.LzmaData(blob.GetLzmaData(), blob.GetRawSize())
 	} else if blob.GetLz4Data() != nil {
-		log.Println("Lz4")
+		return decompress.Lz4Data(blob.GetLz4Data(), blob.GetRawSize())
 	} else if blob.GetZstdData() != nil {
-		log.Println("Zstd")
+		return decompress.ZstdData(blob.GetZstdData(), blob.GetRawSize())
 	}
-	return data
+	return nil, errors.New("blob data compressed in unknown/obsolete format")
 }
 
 func ReadFileBlock(br *bufio.Reader) (*FileBlock, error) {
+	// See https://wiki.openstreetmap.org/wiki/PBF_Format
 	blobHeaderSizeBytes := make([]byte, 4)
 	n, err := br.Read(blobHeaderSizeBytes)
 	if err != nil {
@@ -65,11 +43,9 @@ func ReadFileBlock(br *bufio.Reader) (*FileBlock, error) {
 	if blobHeaderSize > 64*1024 {
 		return nil, errors.New("unexpected large blob header size " + fmt.Sprint(blobHeaderSize))
 	}
-	//log.Println("blobheader size=", blobHeaderSize)
 
 	blobHeaderBytes := make([]byte, blobHeaderSize)
 
-	//n, err = br.Read(blobHeaderBytes)
 	n, err = io.ReadFull(br, blobHeaderBytes)
 	if err != nil {
 		return nil, err
@@ -81,8 +57,6 @@ func ReadFileBlock(br *bufio.Reader) (*FileBlock, error) {
 	if err := proto.Unmarshal(blobHeaderBytes, blobHeader); err != nil {
 		return nil, errors.New("failed to parse blob header: " + err.Error())
 	}
-	//log.Println("blobheader type=", blobHeader.GetType())
-	//log.Println("blob size=", blobHeader.GetDatasize())
 
 	blobSize := int(blobHeader.GetDatasize())
 	if blobSize > 32*1024*1024 {
@@ -90,7 +64,6 @@ func ReadFileBlock(br *bufio.Reader) (*FileBlock, error) {
 	}
 
 	blobBytes := make([]byte, blobSize)
-	//n, err = br.Read(blobBytes)
 	n, err = io.ReadFull(br, blobBytes)
 	if err != nil {
 		return nil, err
@@ -104,10 +77,15 @@ func ReadFileBlock(br *bufio.Reader) (*FileBlock, error) {
 	}
 	//log.Println("blob rawsize=", blob.GetRawSize())
 
+	uncompressedData, err := GetUncompressedBlobData(blob)
+	if err != nil {
+		return nil, err
+	}
+
 	fb := &FileBlock{
 		Type:      blobHeader.GetType(),
 		IndexData: blobHeader.GetIndexdata(),
-		Data:      GetBlobData(blob),
+		Data:      uncompressedData,
 	}
 	return fb, nil
 }

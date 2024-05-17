@@ -34,21 +34,19 @@ func (fileBlock *FileBlock) ParseOSMHeader() {
 	if err := proto.Unmarshal(fileBlock.GetData(), headerBlock); err != nil {
 		log.Fatalln("Failed to parse header block in OSMHeader:", err)
 	}
-	log.Println("OSMHeader ------------------------")
-	log.Println("Writing program =", headerBlock.GetWritingprogram())
-	log.Println("Source =", headerBlock.GetSource())
+	fmt.Println("OSMHeader ------------------------")
+	fmt.Println("Writing program =", headerBlock.GetWritingprogram())
+	fmt.Println("Source =", headerBlock.GetSource())
 
-	log.Print("Required features =")
+	fmt.Println("Required features =")
 	for _, reqFeats := range headerBlock.GetRequiredFeatures() {
-		log.Print(" ", reqFeats)
+		fmt.Println(reqFeats)
 	}
-	log.Println()
 
-	log.Print("Optional features =")
+	fmt.Println("Optional features =")
 	for _, optFeats := range headerBlock.GetOptionalFeatures() {
-		log.Print(" ", optFeats)
+		fmt.Println(optFeats)
 	}
-	log.Println()
 }
 
 func parseDenseNodes(primitiveBlock *pb.PrimitiveBlock, denseNodes *pb.DenseNodes) {
@@ -94,7 +92,7 @@ func parseDenseNodes(primitiveBlock *pb.PrimitiveBlock, denseNodes *pb.DenseNode
 		tagIdx = ti
 
 		tagsStr = strings.TrimSuffix(tagsStr, "|")
-		log.Printf("Dense node id=%d lat=%f lon=%f tags=[%s]", id, latitude, longitude, tagsStr)
+		fmt.Printf("Dense node id=%d lat=%f lon=%f tags=[%s]\n", id, latitude, longitude, tagsStr)
 	}
 }
 
@@ -121,7 +119,7 @@ func parseNodes(primitiveBlock *pb.PrimitiveBlock, nodes []*pb.Node) {
 			tagsStr += fmt.Sprintf("%s=%s|", tagName, tagValue)
 		}
 		tagsStr = strings.TrimSuffix(tagsStr, "|")
-		log.Printf("Node id=%d lat=%f lon=%f tags=[%s]", id, latitude, longitude, tagsStr)
+		fmt.Printf("Node id=%d lat=%f lon=%f tags=[%s]\n", id, latitude, longitude, tagsStr)
 	}
 }
 
@@ -155,7 +153,7 @@ func parseWays(primitiveBlock *pb.PrimitiveBlock, ways []*pb.Way) {
 			tagsStr += fmt.Sprintf("%s=%s|", tagName, tagValue)
 		}
 		tagsStr = strings.TrimSuffix(tagsStr, "|")
-		log.Printf("Way id=%d tags=[%s]", id, tagsStr)
+		fmt.Printf("Way id=%d tags=[%s]\n", id, tagsStr)
 	}
 }
 
@@ -178,7 +176,7 @@ func parseRelations(primitiveBlock *pb.PrimitiveBlock, relations []*pb.Relation)
 			tagsStr += fmt.Sprintf("%s=%s|", tagName, tagValue)
 		}
 		tagsStr = strings.TrimSuffix(tagsStr, "|")
-		log.Printf("Relation id=%d tags=[%s]", id, tagsStr)
+		fmt.Printf("Relation id=%d tags=[%s]\n", id, tagsStr)
 
 		var memId int64
 		for mi, deltaMemId := range relation.GetMemids() {
@@ -197,7 +195,7 @@ func parseRelations(primitiveBlock *pb.PrimitiveBlock, relations []*pb.Relation)
 				// lookup way with memid
 				typstr = "relation"
 			}
-			log.Printf("\tmember type=%s, memid=%d, role=%s", typstr, memId, role)
+			fmt.Printf("\tmember type=%s, memid=%d, role=%s\n", typstr, memId, role)
 
 		}
 	}
@@ -209,7 +207,7 @@ func (fileBlock *FileBlock) ParseOSMData() {
 	if err := proto.Unmarshal(fileBlock.GetData(), primitiveBlock); err != nil {
 		log.Fatalln("Failed to parse primitive block in OSMData:", err)
 	}
-	log.Println("OSMData ------------------------")
+	fmt.Println("OSMData ------------------------")
 	//log.Println("DateGranularity =", primitiveBlock.GetDateGranularity())
 	//log.Println("Granularity =", primitiveBlock.GetGranularity())
 	//log.Println("LatOffset =", primitiveBlock.GetLatOffset())
@@ -222,10 +220,10 @@ func (fileBlock *FileBlock) ParseOSMData() {
 		ways := pg.GetWays()
 		relations := pg.GetRelations()
 		denseNodes := pg.GetDense()
-		log.Println("densenodes = ", len(denseNodes.GetId()))
-		log.Println("nodes = ", len(nodes))
-		log.Println("ways = ", len(ways))
-		log.Println("relations = ", len(relations))
+		fmt.Println("densenodes = ", len(denseNodes.GetId()))
+		fmt.Println("nodes = ", len(nodes))
+		fmt.Println("ways = ", len(ways))
+		fmt.Println("relations = ", len(relations))
 
 		if len(pg.GetDense().GetId()) > 0 {
 			parseDenseNodes(primitiveBlock, pg.GetDense())

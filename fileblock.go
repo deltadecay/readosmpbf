@@ -169,23 +169,6 @@ func parseRelations(primitiveBlock *pb.PrimitiveBlock, relations []*pb.Relation)
 
 		id := relation.GetId()
 
-		var memId int64
-		for mi, deltaMemId := range relation.GetMemids() {
-			memId += deltaMemId
-			// TODO lookup node/way/relation with memId
-			role := string(stringTable[relation.GetRolesSid()[mi]])
-			typ := relation.GetTypes()[mi]
-			if typ == pb.Relation_NODE {
-				// lookup node with memid
-			} else if typ == pb.Relation_WAY {
-				// lookup way with memid
-			} else if typ == pb.Relation_RELATION {
-				// lookup way with memid
-			}
-			log.Printf("\tmember type=%d, memid=%d, role=%s", typ, memId, role)
-
-		}
-
 		tagsStr := ""
 		for ti := 0; ti < len(relation.GetKeys()); ti++ {
 			keyIdx := relation.GetKeys()[ti]
@@ -196,6 +179,27 @@ func parseRelations(primitiveBlock *pb.PrimitiveBlock, relations []*pb.Relation)
 		}
 		tagsStr = strings.TrimSuffix(tagsStr, "|")
 		log.Printf("Relation id=%d tags=[%s]", id, tagsStr)
+
+		var memId int64
+		for mi, deltaMemId := range relation.GetMemids() {
+			memId += deltaMemId
+			// TODO lookup node/way/relation with memId
+			role := string(stringTable[relation.GetRolesSid()[mi]])
+			typ := relation.GetTypes()[mi]
+			var typstr = ""
+			if typ == pb.Relation_NODE {
+				// lookup node with memid
+				typstr = "node"
+			} else if typ == pb.Relation_WAY {
+				// lookup way with memid
+				typstr = "way"
+			} else if typ == pb.Relation_RELATION {
+				// lookup way with memid
+				typstr = "relation"
+			}
+			log.Printf("\tmember type=%s, memid=%d, role=%s", typstr, memId, role)
+
+		}
 	}
 }
 
